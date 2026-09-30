@@ -1,0 +1,14 @@
+"workshopitem"
+{
+    "appid"             "3175590"
+    "publishedfileid"   "0"
+
+    "contentfolder"     "Content Folder File Path Containing Pak, UTOC, UCAS"
+    "previewfile"       "Preview Image File Path"
+
+    "visibility"        "0"
+    "title"             "My HAUNT Map"
+    "description"       "A HAUNT Workshop map"
+    "changenote"        "Initial release"
+    "tags"              "Map"
+}

@@ -1,0 +1,60 @@
+name: Map loading problem
+description: Your Workshop map doesn't mount, load, or play correctly in HAUNT.
+title: "[Map loading]: "
+labels: ["map loading"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening this issue, check the [troubleshooting table](https://github.com/ApostolosGames/HauntWorkshop#troubleshooting) in the guide.
+        If you think the problem is a security issue, follow the [security policy](https://github.com/ApostolosGames/HauntWorkshop/blob/main/SECURITY.md) instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happens?
+      description: Describe what goes wrong, and include HAUNT's error message if one appears (for example `Could not find a map` or `Found N maps inside ...`).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: input
+    id: workshop_id
+    attributes:
+      label: Workshop item ID
+      description: Leave blank if the item is private and you'd rather not share it.
+  - type: input
+    id: engine_version
+    attributes:
+      label: Unreal Engine version used to cook the map
+      placeholder: "5.8.x"
+    validations:
+      required: true
+  - type: textarea
+    id: upload_folder
+    attributes:
+      label: Upload folder contents
+      description: List the files in the folder you uploaded to Steam.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: pak_listing
+    attributes:
+      label: Pak listing
+      description: Output of `UnrealPak.exe "<your map>.pak" -List`, or at least the `.umap` and `AssetRegistry.bin` lines.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: The map was cooked with Unreal Engine 5.8.
+          required: true
+        - label: The upload folder contains only one `.pak` with matching `.utoc` and `.ucas` files.
+          required: true
+        - label: The pak contains exactly one `.umap`.
+        - label: I applied the `[Pak]` settings from the guide.

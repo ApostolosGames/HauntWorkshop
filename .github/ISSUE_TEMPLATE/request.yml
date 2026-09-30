@@ -1,0 +1,17 @@
+name: Request
+description: Suggest a new topic, reference template, or improvement for map creators.
+title: "[Request]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: request
+    attributes:
+      label: What would you like?
+      description: Describe the topic, template, or change, and the problem it would solve for map creators.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Screenshots, examples, or links that help explain the request.

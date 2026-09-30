@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/ApostolosGames/HauntWorkshop/security/advisories/new
+    about: Report security problems privately. Do not open a public issue.
+  - name: Read the Workshop map guide
+    url: https://github.com/ApostolosGames/HauntWorkshop#readme
+    about: Check the guide and its troubleshooting table before opening an issue.

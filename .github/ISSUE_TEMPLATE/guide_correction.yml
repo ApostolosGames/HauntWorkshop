@@ -1,0 +1,24 @@
+name: Guide correction
+description: Something in the guide is wrong, outdated, or unclear.
+title: "[Guide]: "
+labels: ["documentation"]
+body:
+  - type: input
+    id: section
+    attributes:
+      label: Section
+      description: Which section of the guide is affected?
+      placeholder: "Map positioning and gameplay landmarks"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong or unclear?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix
+      description: What should the guide say instead? Say how you confirmed it, for example by testing a private Workshop upload.
