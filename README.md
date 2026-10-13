@@ -12,7 +12,7 @@ Your map has to be self-contained. Build the level, its geometry, materials, and
 
 ## Quick start
 
-1. Create a blank UE 5.8 project and a new, empty level.
+1. Create a blank UE 5.8 project with its own name, add a content-only plugin with a unique name, and create a new, empty level inside it (see [Keep your content in its own plugin](#keep-your-content-in-its-own-plugin)).
 2. Import the [reference templates](#reference-templates) and place the container template at its landmark position.
 3. Build your map around world origin `(0, 0, 0)`, leaving room for the hunter container and the ghost spawn area (see [Map positioning and gameplay landmarks](#map-positioning-and-gameplay-landmarks)).
 4. Light the map yourself, including any sky and sun (see [Lighting](#lighting)).
@@ -29,13 +29,41 @@ Each Workshop item must contain **exactly one `.umap`**: your playable map, and 
 - Create the level with **File → New Level → Empty Level** (or Basic) and keep **World Partition disabled**. Open World / World Partition maps cook into extra generated level packages.
 - Do not use sublevels, level streaming, or Level Instance actors that point at other `.umap` files. Build everything into the one level.
 - In **Project Settings → Packaging → List of maps to include in a packaged build**, list only your map, and don't cook Starter Content or template maps.
-- Keep the map under your project's `/Game/` content or a content-only plugin of your own; do not place it under `/Engine/` or an Engine plugin root. HAUNT ignores maps under those roots.
+- Keep the map and everything it made or imported in **one** content-only plugin of your own (see [Keep your content in its own plugin](#keep-your-content-in-its-own-plugin)). Maps under `/Game/` still load for now, but only in a restricted compatibility mode, and that support may be removed in a later update. Do not place the map under `/Engine/` or an Engine plugin root.
 - Package all assets referenced by the map. Missing meshes, materials, textures, or Blueprint classes will prevent clients from loading it correctly.
 - Use only your own assets and stock UE 5.8 engine features. HAUNT cannot load custom C++ code or code plugins from a Workshop pak, and content from an Engine plugin only works if HAUNT has that plugin enabled too.
 - You do not need a Player Start, GameMode, or GameMode override. HAUNT loads your map into its lobby world as a level instance and places the hunter container, hunters, ghosts, and spectators itself. Your map's World Settings are not used.
-- Do not include the HAUNT executable, base-game paks, Engine content, or unrelated files.
+- Do not include the HAUNT executable, base-game paks, or unrelated files. Your cook will also contain the engine assets your map references (default materials, basic shapes, and so on). That is expected, but don't add Engine content the map doesn't use.
+- Don't edit stock engine assets (for example `/Engine/BasicShapes` or the default materials) and expect the edit to show up. HAUNT ships its own copies of engine content, and when your pak contains an asset HAUNT already has, HAUNT's copy is the one that loads. To change an engine asset, duplicate it into your own plugin and edit the duplicate.
 
 HAUNT discovers the map from its cooked Asset Registry rather than guessing from a filename. If a pak contains more than one map, HAUNT rejects it instead of choosing one arbitrarily. Before uploading, confirm there is exactly one `.umap` in the pak (see [Check the cooked files](#2-check-the-cooked-files)).
+
+### Keep your content in its own plugin
+
+Unreal identifies every asset by its package path, and HAUNT's own content also lives under `/Game/`. If your pak contains an asset at the same path as one of HAUNT's, HAUNT's asset is used and yours is ignored, so your map shows the wrong mesh, material, or Blueprint, or fails to load. This happens easily if you start from a UE template project (`/Game/ThirdPerson`, `/Game/FirstPerson`, `/Game/LevelPrototyping`, `/Game/Characters`, `/Game/Input`) or use a Fab or Marketplace pack that installs into `/Game/<PackName>`.
+
+To avoid it, put your map and all of its assets in a content-only plugin:
+
+1. In **Edit → Plugins**, choose **Add**, pick **Content Only**, and give it a name nobody else is likely to use, for example `YourName_MapName`. Give your Unreal project its own name too.
+2. Create your level inside the plugin's content folder, and move or migrate any packs and assets you use into that folder too.
+3. Make sure nothing the map uses still points at `/Game/` or at another plugin of yours. Right-click the map in the Content Browser and open the **Reference Viewer** to see its dependencies.
+
+Your content then cooks under `/YourName_MapName/...` and can't collide with HAUNT's assets.
+
+HAUNT refuses a map when:
+
+- Its own content is spread over more than one root, for example the plugin plus some leftovers in `/Game/`, or two plugins. Engine content your map references is fine and doesn't count.
+- The plugin or the project has a reserved name or one HAUNT already uses. Don't use `Game`, `Engine`, `Script`, `Memory`, `Temp`, `Config`, `Extra`, `Global`, `Ghost`, or the name of any plugin HAUNT ships with. A name that includes your own name or the map's name is safest.
+- It still uses `/Game/` and any of its assets has the same path as one of HAUNT's. In that case, move everything into a plugin.
+
+### Keep the cook clean
+
+HAUNT reads the full file list of your `.pak` and `.utoc` before loading anything, and refuses an item if it can't, or if the list has something a map should never contain:
+
+- Don't encrypt the pak or IoStore container, and don't strip the pak's file list. The default packaging settings are correct; leave **Encrypt Pak** options off.
+- Every cooked file must come from your own project folder or the engine's content. Don't add files from outside the project, and don't hand-edit the pak's mount point.
+- No `Binaries` folders, executables, DLLs, or scripts (`.exe`, `.dll`, `.bat`, `.cmd`, `.ps1`, `.vbs`, `.js`, and similar) anywhere in the cook. A content-only plugin with no code module never produces these.
+- Don't localize assets (`L10N` folders or asset localization). Localized asset variants and package redirects aren't supported in Workshop maps.
 
 ## Unreal packaging settings
 
@@ -71,10 +99,11 @@ Rules:
 
 - Exactly one `.pak` file is allowed.
 - Its `.utoc` and `.ucas` files must have the same filename stem as the `.pak`.
-- Do not upload folders, executables, `Config`, `Content`, source files, logs, `.sig` files, or extra paks.
+- The filename stem must not end in `_P` (for example `MyMap_P.pak`). That suffix is reserved for patches, and HAUNT rejects it. Some modding guides use `_P` out of habit; Workshop maps don't need it.
+- Nothing else may be in the folder: no subfolders, executables, scripts, `Config`, `Content`, source files, logs, `.sig` files, readme files, or extra paks.
 - Do not rename just one of the three files. Rename all three together if you rename them at all.
 
-HAUNT validates this layout before mounting the Workshop item. It rejects uploads with no pak, multiple paks, or a pak missing its matching IoStore files.
+HAUNT checks this layout before mounting the Workshop item. It refuses an item with no pak, more than one pak, a pak missing its matching IoStore files, a `_P` filename, or any other file or folder next to the three.
 
 ## Uploading with SteamCMD
 
@@ -91,7 +120,7 @@ This repository includes [`workshop_item.vdf.example`](workshop_item.vdf.example
 
 The template defaults to `0`. Set it to `2` for your first upload (see [Testing your map](#testing-your-map)).
 
-The template adds the required `Map` Workshop tag. Upload it with:
+The template sets the `Map` Workshop tag. HAUNT requires it: an item without the `Map` tag won't be offered as a map, so don't remove it. Upload it with:
 
 ```powershell
 steamcmd +login <SteamUser> +workshop_build_item "C:\Path\To\workshop_item.vdf" +quit
@@ -106,7 +135,7 @@ HAUNT only loads Workshop maps from Steam, so you cannot load a local pak in the
 Play in Editor (PIE) in your own project, with the [reference templates](#reference-templates) placed, to check:
 
 - the container template's door opens onto clear, walkable floor
-- character templates fit through doors, corridors, and hiding spots, and across the ghost spawn grid
+- character templates fit through doors, corridors, and hiding spots, and across the ghost spawn grid, with the headroom described in [Character size](#character-size)
 - lighting is readable with only your map's lights (HAUNT hides its sky for Workshop maps)
 - the map is still navigable with your placed Light actors hidden, as they will be during the Haunt phase
 - players cannot fall off the map toward the lobby below
@@ -126,7 +155,7 @@ Play in Editor (PIE) in your own project, with the [reference templates](#refere
 6. Play through a Haunt phase and use a ghost EMP to check how the map looks with its lights off.
 7. Fix any problems, re-cook, and upload again with the same `publishedfileid`. If Steam doesn't pick up the new version right away, restart Steam or unsubscribe and resubscribe.
 
-To test with other players before release, set `"visibility"` to `"1"` (friends-only). Your Steam friends can then download the item when they join your lobby. Clients automatically download the host-selected Workshop map and must finish downloading and loading it before they count as ready to start the match.
+To test with other players before release, set `"visibility"` to `"1"` (friends-only). Your Steam friends can then download the item when they join your lobby. Clients automatically download the host-selected Workshop map and must finish downloading and loading it before they count as ready to start the match. A player whose game can't load the map leaves the lobby and is told why on the main menu, and the map shows as failed for that player on the lobby's map screen. If the host's own game can't load it, the match is cancelled for everyone. Test with at least one other player before you publish.
 
 ### 4. Publish
 
@@ -140,12 +169,12 @@ HAUNT mounts your pak, then loads the map into the lobby world as a level instan
 | --- | --- | --- |
 | Map origin | `(0, 0, 0)` | Places your level instance. |
 | Hunter container | `(0, 0, 205)`, rotation `(0, 0, 90)` | Moves the container from the lobby to this spot with the hunters inside. Its door faces the **negative X axis**. |
-| Ghost spawn | around `(-700, 0, 300)` | Spawns ghosts, and spectators, on the floor in front of the container door. |
-| Lobby | around `(0, 0, -8000)` | HAUNT's lobby, below your map. It is only loaded for players inside the lobby area. |
+| Ghost spawn | around `(-700, 0, 300)` | Spawns ghosts, and players who join mid-match as spectators, on the floor in front of the container door. |
+| Lobby | around `(0, 0, -8000)` | HAUNT's lobby, below your map. It stays loaded and solid during the match; it is only hidden from players outside it. |
 
 ### Hunter container
 
-Hunters do not spawn in your map. They board HAUNT's shipping container in the lobby. When the round starts, HAUNT moves the container to **`(0, 0, 205)`** with rotation **`(0, 0, 90)`** (yaw 90°) and scale `(1.8, 1.5, 1.5)`, then teleports every hunter to the same spot inside it.
+Hunters do not spawn in your map. They board HAUNT's shipping container in the lobby. When the round starts, HAUNT moves the container to **`(0, 0, 205)`** with rotation **`(0, 0, 90)`** (yaw 90°) and scale `(1.8, 1.5, 1.5)`, and moves the hunters with it, keeping each hunter's position inside the container. Any hunter who had wandered out of the container in the lobby is put back inside before it moves.
 
 - Do not build or include a container; HAUNT brings its own. Use the [container template](#reference-templates) to see exactly where it will be.
 - Keep the area around `(0, 0, 205)` free of your geometry so the container doesn't clip into walls or props and hunters aren't trapped.
@@ -153,33 +182,40 @@ Hunters do not spawn in your map. They board HAUNT's shipping container in the l
 
 ### Ghost spawn
 
-Ghosts and spectators are placed by searching a **5 × 5 grid of points spaced 75 cm apart**, centered on **`(-700, 0, 300)`**. That covers X `-850` to `-550` and Y `-150` to `150`. For each point, HAUNT:
+Ghosts, and players who join mid-match as spectators, are placed at one spawn point that HAUNT finds near **`(-700, 0, 300)`**. It tests that center point first, and only if the center fails does it search a **5 × 5 grid of points spaced 75 cm apart** around it. That covers X `-850` to `-550` and Y `-150` to `150`. For each point, HAUNT:
 
 1. Traces straight down from Z `400` to Z `-700` for a floor that blocks the **WorldStatic** or **WorldDynamic** object types.
-2. Checks that a character-sized capsule standing on that floor is clear on the **Visibility** channel.
+2. Checks that a capsule 70 cm wide and 180 cm tall, standing 2 cm above that floor, is clear on the **Visibility** channel.
 
-To make sure every ghost gets a valid spot:
+Every ghost gets the same point, the first one that passes, so all ghosts start at or right around that spot. Players who die become spectators where they died, not here.
+
+To make sure ghosts spawn where you intended:
 
 - Put walkable floor with collision under that whole area, with its surface between Z `-700` and Z `400`. Keeping it close to the container floor is best.
-- Leave the area open and at least a character's height clear above the floor. Walls, props, low ceilings, and invisible blocking volumes all count as obstructions.
-- If no grid point passes, ghosts may not spawn where you intended.
+- Leave the area open, with at least 185 cm of clear headroom above the floor, and room around the center for several ghosts side by side. Walls, props, low ceilings, and invisible blocking volumes all count as obstructions.
+- If no point passes, ghosts may not spawn where you intended.
 
 ### Lobby
 
-HAUNT's lobby sits below the map at about **`(0, 0, -8000)`**; its geometry spans roughly Z `-8600` to `-7800`. Each player's client only loads the lobby while that player is inside the lobby area, so during a match it is unloaded for everyone on your map.
+HAUNT's lobby sits below the map at about **`(0, 0, -8000)`**; its geometry spans roughly Z `-8600` to `-7800`. The lobby stays loaded for the whole match. While a player is outside it, HAUNT only hides the lobby's meshes and lights on that player's screen; its collision is still there.
 
-- Keep all of your geometry well above it and do not build downward into that space.
-- Make sure players cannot fall through or walk off your map toward the lobby. Close off holes and map edges with floors, walls, or blocking volumes.
+The lobby's area is a box from X `-3200` to `4800`, Y `-5400` to `3600`, and Z `-9207` to `-7007`.
+
+- Keep all of your geometry above Z `-7000` and do not build downward into the lobby's space.
+- Make sure players cannot fall through or walk off your map. A player who falls toward the lobby can land on its invisible geometry instead of dying. Close off holes and map edges with floors, walls, or blocking volumes.
 
 ### Character size
 
-HAUNT characters are about **95% of the UE5 mannequin's height** and about **twice its width**. Size corridors, doors, props, hiding spaces, and ghost spawn clearance for this wider character shape.
+What blocks a HAUNT character is its collision capsule: **70 cm wide and 180 cm tall** (radius 35, half-height 90). That is slightly narrower and shorter than the UE5 mannequin's capsule (84 × 192 cm).
 
-Use the [character template](#reference-templates) to check doorways, corridors, hiding spots, and the ghost spawn area.
+- Doorways, corridors, and gaps players should fit through need to be wider than 70 cm. Leave a margin, for example 90 cm or more.
+- Ceilings, hiding spots, and anything players walk under need more than 180 cm of headroom. Aim for 185 cm or more.
+
+Use the [character template](#reference-templates) to check doorways, corridors, hiding spots, and the ghost spawn area. The template is 171 cm tall, 9 cm shorter than the capsule, so use the numbers above for headroom.
 
 ## Reference templates
 
-The [`Templates/`](Templates/) folder contains two FBX blockout meshes that match the size of HAUNT's real container and characters. They are sizing references only: HAUNT brings the real container and characters at runtime, so these meshes must never ship in your map.
+The [`Templates/`](Templates/) folder contains two FBX blockout meshes that show the size of HAUNT's real container and characters. For character headroom and gaps, use the collision numbers in [Character size](#character-size). They are sizing references only: HAUNT brings the real container and characters at runtime, so these meshes must never ship in your map.
 
 | File | Size (X × Y × Z) | Pivot | Marked face |
 | --- | --- | --- | --- |
@@ -222,33 +258,40 @@ Place the lights that should go dark during a haunt as standalone light actors, 
 
 ## Footstep sounds (physical materials)
 
-HAUNT picks footstep sounds from the **Surface Type** of the physical material under the player's feet. HAUNT's surface types are matched by slot number, so your project must use the same slots:
+HAUNT chooses footstep sounds by **which physical material asset** is under the player's feet, not by its Surface Type. Its wood, stone, metal, grass, and carpet sounds are tied to HAUNT's own physical material assets, which a Workshop map can't reference. Setting up matching Surface Type slots in your project has no effect.
 
-| Surface Type slot | Name | Footstep sound |
-| --- | --- | --- |
-| `SurfaceType1` | `WOOD` | Wood |
-| `SurfaceType2` | `STONE` | Stone |
-| `SurfaceType3` | `METAL` | Metal |
-| `SurfaceType4` | `GRASS` | Grass |
-| `SurfaceType5` | `CARPET` | Carpet |
+For Workshop maps this means:
 
-Surfaces with no physical material, or any other surface type, use the default footstep sound.
+- **Surfaces with no physical material** use the engine's default physical material, which HAUNT plays as the **stone** footstep. This is the setup to use.
+- **Surfaces with a physical material of your own** are not recognized by HAUNT, and **footsteps on them are silent**. Do not assign your own physical materials to floors, stairs, or anything else players walk on.
+- Do not try to recreate HAUNT's physical materials at the same asset paths in your project. That puts copies of HAUNT's assets in your pak (see [Keep your content in its own plugin](#keep-your-content-in-its-own-plugin)).
 
-1. **Define the surface types.** In **Project Settings → Engine → Physics → Physical Surface**, name `SurfaceType1` to `SurfaceType5` exactly as in the table. Only the slot number is used in game; the names just make them easy to pick in the editor. This writes the following to `Config/DefaultEngine.ini`:
+Surface-specific footsteps are not available to Workshop maps yet. Physical materials from Fab or Marketplace packs count as your own, so remove them from walkable surfaces (in the floor material, the mesh's **Simple Collision Physical Material**, the component's **Phys Material Override**, or the landscape layers). Walk across your map in HAUNT during testing and listen for silent spots.
 
-   ```ini
-   [/Script/Engine.PhysicsSettings]
-   +PhysicalSurfaces=(Type=SurfaceType1,Name="WOOD")
-   +PhysicalSurfaces=(Type=SurfaceType2,Name="STONE")
-   +PhysicalSurfaces=(Type=SurfaceType3,Name="METAL")
-   +PhysicalSurfaces=(Type=SurfaceType4,Name="GRASS")
-   +PhysicalSurfaces=(Type=SurfaceType5,Name="CARPET")
-   ```
+## Blueprints in your map
 
-2. **Create physical materials.** In the Content Browser, choose **Add → Physics → Physical Material** and create one per surface, for example `PM_Wood`, `PM_Stone`, `PM_Metal`, `PM_Grass`, and `PM_Carpet`. Set each one's **Surface Type** to the matching entry.
-3. **Assign them to your floors.** Set **Phys Material** in the details of each floor material or material instance. For meshes with more than one material, the first material slot decides unless you set **Simple Collision Physical Material** on the static mesh or **Phys Material Override** on the placed component. For landscapes, assign physical materials to the landscape layers.
+Your map may contain Blueprint actors, for example for ambient effects, moving props, or sound. Keep these limits in mind:
 
-The physical materials are cooked into your pak like any other asset your map references, so HAUNT doesn't need to know their names. Walk across each surface in HAUNT during testing to confirm the right sound plays.
+- HAUNT does not yet offer a way for Workshop actors to hook into its gameplay. The interact key, weapons and other items, damage, round phases, and win conditions do not reach your Blueprints, so you can't make doors, buttons, traps, or objectives that players use through HAUNT's controls.
+- Every player's game loads your map separately, and your Blueprints run separately on each of them. Anything driven by local events, such as timers, random numbers, or a player's own overlaps, can look or behave differently for different players.
+- Workshop maps can't reach outside the game. Build anything your map needs out of in-world actors, components, and assets.
+
+### Nodes and references Workshop maps can't use
+
+HAUNT checks every Blueprint and asset in your pak before the map loads. If any of them uses one of the following, HAUNT refuses the whole map and names the asset and the node in the error:
+
+- **HAUNT's own assets and classes.** Don't reference anything of HAUNT's, and don't recreate HAUNT's assets or classes at the same paths in your project to reference them. This applies to hard references, soft references, and Blueprint parent classes. It also covers the plugins HAUNT ships with: Steam, voice chat, Discord, and painting.
+- **Code HAUNT doesn't include.** Nodes, components, or parent classes from a plugin that isn't part of HAUNT, including plugins that are only part of the Unreal Editor.
+- **Leaving or controlling the game:** Open Level, Quit Game, Execute Console Command, Launch URL, and any web-browser, HTTP, online-subsystem, file-utility, or asset-registry node.
+- **Reaching things by name:** Set Timer by Function Name (use **Set Timer by Event**), the **Set ... Property by Name** nodes, Make Soft Object Path or Make Soft Class Path from a string, and primary-asset lookups (Get Primary Asset Id List, Get Object from Primary Asset Id, and their async load nodes).
+- **Player data and settings:** Save Game to Slot, Load Game from Slot, Delete Game in Slot, the async save and load nodes, Game User Settings nodes, and Set Current Culture, Language, or Locale.
+- **Files and outside media:** Export Render Target, Export Texture 2D, Import File as Texture 2D, Finish Recording Submix Output (the submix/output recording export), string table CSV import or export, Media Player Open URL or Open File, File Media Source Set File Path, Stream Media Source assets, the Download Image node, and audio capture (microphone) components.
+
+What you can use instead:
+
+- Timers: **Set Timer by Event** with your own custom events.
+- Loading: hard references to your own assets, or soft references you pick in the Details panel and load with **Async Load Asset** / **Load Asset**.
+- Media: Media Player **Open Source** with a File Media Source asset inside your own plugin.
 
 ## Updating an existing Workshop item
 
@@ -263,17 +306,33 @@ Once released, keep the Workshop item public and available. Private, removed, or
 | `No .pak file found` | The upload folder is wrong or empty. | Upload the cooked pak alongside its matching IoStore files. |
 | `Expected exactly one .pak` | More than one pak was uploaded. | Make a clean folder containing only one pak set. |
 | `missing .ucas/.utoc` | One or both IoStore companion files are absent or misnamed. | Repackage and upload all three matching files. |
+| `ends in _P, which is reserved` | The pak's filename ends in `_P`. | Rename the `.pak`, `.utoc`, and `.ucas` together to a stem without `_P`, and upload again. |
+| `may only contain its .pak, .utoc and .ucas` | The upload folder had another file or a subfolder in it. | Upload from a clean folder that contains only the three files. |
+| `must all be in one plugin; found N roots` | The map's assets are split between your plugin and `/Game/`, or across several plugins. | Move everything the map uses into one content-only plugin, and remove leftovers from the cook. |
+| `plugin name ... is a reserved name` or `is already used by HAUNT` | The plugin's name collides with a reserved or existing name. | Rename the plugin to something unique, such as `YourName_MapName`, and cook again. |
+| `cooked from a project named ...` or `must all come from one project folder` | The project is named after HAUNT or the engine, or the cook contains files from outside the project. | Give the project its own name, and package only from that project. |
+| `already exists in HAUNT` | A `/Game/` asset in your map has the same path as one of HAUNT's. | Move the map and its assets into a content-only plugin. |
+| `is encrypted` or `has no full file list` | Pak encryption or index stripping was enabled. | Turn encryption off and package with the default pak settings. |
+| `a file type a map may not include` or `a path outside its own folders` | The cook contains executables, scripts, `Binaries` folders, or files from outside the project. | Use a content-only plugin, and package only the map and the assets it uses. |
+| `redirects or localizes packages` | The map uses asset localization. | Remove localized asset variants and cook again. |
+| `'<asset>' uses '<node or class>', which Workshop maps may not use` | That asset uses a node or class from [Nodes and references Workshop maps can't use](#nodes-and-references-workshop-maps-cant-use). | Replace it with one of the alternatives listed there, and cook again. |
+| `references one of HAUNT's own assets` | Something in the map points at HAUNT's content, often through a stand-in asset at one of HAUNT's paths, or a soft reference. | Remove the reference. Use the Reference Viewer to find which asset holds it. |
+| `has a damaged package header` | The cook is corrupt or wasn't made with UE 5.8. | Cook again with UE 5.8. |
 | `Found N maps inside ...` | The pak contains more than one `.umap` (a second map, sublevels, World Partition cells, or template maps). | Keep a single level with World Partition disabled, remove other maps from the cook list, and repackage. |
+| Your subscribed item doesn't appear as a map in HAUNT | The item is missing the `Map` Workshop tag. | Add `"tags" "Map"` to `workshop_item.vdf` and upload again with the same `publishedfileid`. |
 | `Could not find a map` | The Asset Registry/map index was stripped, or the map was not cooked. | Add the `[Pak]` settings above and ensure the map is cooked. |
 | Map loads without expected assets | A referenced dependency was not included, or it depends on a plugin or custom code HAUNT does not have. | Cook all dependencies with UE 5.8, and use only your own assets and stock engine features. |
 | Map is dark or unlit | HAUNT hides its sky for Workshop maps and adds no lighting; the map has no lights of its own, or static lighting was not built. | Add your own sky/sun and local lights, and build lighting before cooking if you use static/stationary lights. |
 | Materials render as the default gray material | The pak's shader library could not be found. | Keep the `[Pak]` settings above so `AssetRegistry.bin` stays in the pak, and cook with the default shader library settings. |
 | Hunters are stuck or pushed out of the container | Map geometry overlaps the container at `(0, 0, 205)` or blocks its door. | Clear the container footprint and the space on its negative X side. |
-| Ghosts do not spawn correctly | No valid floor or not enough room in the spawn grid around `(-700, 0, 300)`. | Add walkable floor with WorldStatic/WorldDynamic collision between Z `-700` and `400`, and keep the grid area clear on the Visibility channel. |
+| Ghosts do not spawn correctly | No valid floor or not enough room in the spawn grid around `(-700, 0, 300)`. | Add walkable floor with WorldStatic/WorldDynamic collision between Z `-700` and `400`, and keep the grid area clear on the Visibility channel, with at least 185 cm of headroom. |
+| A player leaves the lobby while the map loads, or the match is cancelled | That player's (or the host's) game couldn't load the map. The message on their main menu says whether the files were damaged, couldn't be downloaded, or were refused. | Check that every asset the map uses is in the pak and that nothing depends on a plugin or custom code HAUNT does not have, then test again with another player. |
+| Some of your assets look wrong or are replaced in HAUNT | Your pak contains assets at the same paths as HAUNT's, for example from a UE template project, a Fab pack, or an edited engine asset. HAUNT's copy is used. | Move your map and all of its assets into a uniquely named content-only plugin (see [Keep your content in its own plugin](#keep-your-content-in-its-own-plugin)). |
+| Footsteps are silent on some surfaces | Those surfaces use a physical material of your own. | Remove the physical material from walkable surfaces so they use the engine default (see [Footstep sounds](#footstep-sounds-physical-materials)). |
 
-## Contributing and support
+## Support
 
-- Found something wrong in this guide, or need help with a map that won't load? Open an [issue](https://github.com/ApostolosGames/HauntWorkshop/issues/new/choose). See [CONTRIBUTING.md](CONTRIBUTING.md) for pull requests.
+- Found something wrong in this guide, or need help with a map that won't load? Open an [issue](https://github.com/ApostolosGames/HauntWorkshop/issues/new/choose).
 - Report security problems privately, as described in [SECURITY.md](SECURITY.md).
 - Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
