@@ -17,7 +17,7 @@ Your map has to be self-contained. Build the level, its geometry, materials, and
 3. Build your map around world origin `(0, 0, 0)`, leaving room for the hunter container and the ghost spawn area (see [Map positioning and gameplay landmarks](#map-positioning-and-gameplay-landmarks)).
 4. Light the map yourself, including any sky and sun (see [Lighting](#lighting)).
 5. Apply the [packaging settings](#unreal-packaging-settings) and cook the map to a `.pak` + `.utoc` + `.ucas` set.
-6. [Test it](#testing-your-map): check it in the editor, [upload it with SteamCMD](#uploading-with-steamcmd) as a private item, subscribe, and play it in HAUNT.
+6. [Test it](#testing-your-map): check it in the editor, [upload it with SteamCMD](#uploading-with-steamcmd) as a private item tagged `Map` (HAUNT ignores items without this tag), subscribe, and play it in HAUNT.
 7. Make the item public once it works.
 
 ## One Workshop item = one playable map
@@ -118,7 +118,7 @@ This repository includes [`workshop_item.vdf.example`](workshop_item.vdf.example
 | `2` | Private | Your first uploads and solo testing. |
 | `3` | Unlisted | Not listed in the Workshop, but anyone with the link can see it. |
 
-The template defaults to `0`. Set it to `2` for your first upload (see [Testing your map](#testing-your-map)).
+The template defaults to `2` (private) so your first upload isn't public. Change it to `0` only when the map is ready to release (see [Testing your map](#testing-your-map)).
 
 The template sets the `Map` Workshop tag. HAUNT requires it: an item without the `Map` tag won't be offered as a map, so don't remove it. Upload it with:
 
@@ -147,7 +147,7 @@ Play in Editor (PIE) in your own project, with the [reference templates](#refere
 
 ### 3. Upload privately and test in HAUNT
 
-1. In `workshop_item.vdf`, set `"visibility"` to `"2"` (private) and upload with SteamCMD as described above. Note the `publishedfileid` that Steam assigns and put it in the VDF so later uploads update the same item.
+1. In `workshop_item.vdf`, keep `"visibility"` at `"2"` (private) and upload with SteamCMD as described above. Note the `publishedfileid` that Steam assigns and put it in the VDF so later uploads update the same item.
 2. Subscribe to the item in the Steam Workshop and let Steam download it.
 3. Start HAUNT, host a lobby, and select the item as the Workshop map.
 4. Confirm the map mounts, loads, and displays all assets, materials, and lighting.
