@@ -42,6 +42,12 @@ body:
     validations:
       required: true
   - type: textarea
+    id: workshop_log
+    attributes:
+      label: Workshop.log
+      description: Paste `%LOCALAPPDATA%\Ghost\Saved\Logs\Workshop.log` from the PC where the map failed (or `Workshop-backup.log` if you have started HAUNT again since). It names the exact file or setting HAUNT refused.
+      render: text
+  - type: textarea
     id: pak_listing
     attributes:
       label: Pak listing
@@ -57,4 +63,4 @@ body:
         - label: The upload folder contains only one `.pak` with matching `.utoc` and `.ucas` files.
           required: true
         - label: The pak contains exactly one `.umap`.
-        - label: I applied the `[Pak]` settings from the guide.
+        - label: I packaged the map with `Tools/PackageWorkshopMap.ps1`, and it finished without errors.

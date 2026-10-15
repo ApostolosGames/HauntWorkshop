@@ -1,0 +1,26 @@
+{
+	"HauntRendererSettings": {
+		"r.Substrate": "0",
+		"r.GBufferFormat": "1",
+		"r.ForwardShading": "0",
+		"r.VirtualTextures": "1",
+		"r.VT.TileSize": "128",
+		"r.VT.TileBorderSize": "4",
+		"r.VT.AnisotropicFiltering": "0",
+		"r.MeshPaintVirtualTexture.Support": "1",
+		"r.StaticMesh.DefaultMeshPaintTextureSupport": "1",
+		"Compat.UseDXT5NormalMaps": "0",
+		"r.ClearCoatNormal": "0",
+		"r.DBuffer": "1",
+		"r.SelectiveBasePassOutputs": "0",
+		"r.VelocityOutputPass": "0",
+		"r.Velocity.EnableVertexDeformation": "2",
+		"r.AllowGlobalClipPlane": "0",
+		"r.EarlyZPassOnlyMaterialMasking": "1",
+		"r.Material.RoughDiffuse": "0",
+		"r.Material.EnergyConservation": "0",
+		"r.LegacyLuminanceFactors": "0",
+		"r.SkinCache.CompileShaders": "0",
+		"r.GPUSkin.Limit2BoneInfluences": "0"
+	}
+}
