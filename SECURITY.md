@@ -5,7 +5,7 @@
 This repository documents how to build and publish Steam Workshop maps for **HAUNT**. Please report security problems with:
 
 - HAUNT's Workshop map loading, for example a crafted `.pak`/`.utoc`/`.ucas` set that crashes the game, runs unexpected code, or reads or writes files outside the Workshop item
-- anything in this repository (the guide, the SteamCMD template, or the FBX templates) that could put map creators or players at risk
+- anything in this repository (the guide, the tools including the Workshop uploader, or the FBX templates) that could put map creators or players at risk
 
 Ordinary map-loading errors, such as `Could not find a map` or `Expected exactly one .pak`, are not security issues. Use the [Map loading problem](https://github.com/ApostolosGames/HauntWorkshop/issues/new/choose) issue form for those.
 
