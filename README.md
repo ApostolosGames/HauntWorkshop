@@ -18,7 +18,7 @@ Your map has to be self-contained. Build the level, its geometry, materials, and
 3. Build your map around world origin `(0, 0, 0)`, leaving room for the hunter container and the ghost spawn area (see [Map positioning and gameplay landmarks](#map-positioning-and-gameplay-landmarks)).
 4. Light the map yourself, including any sky and sun (see [Lighting](#lighting)).
 5. Package the map with [`Tools/PackageWorkshopMap.ps1`](#packaging-your-map). It checks your renderer settings and produces a `.pak` + `.utoc` + `.ucas` set that holds only your map.
-6. [Test it](#testing-your-map): check it in the editor, [upload it with SteamCMD](#uploading-with-steamcmd) as a private item tagged `Map` (HAUNT ignores items without this tag), subscribe, and play it in HAUNT.
+6. [Test it](#testing-your-map): check it in the editor, [upload it with the Workshop uploader](#uploading-to-the-workshop) as a private item tagged `Map` (HAUNT ignores items without this tag), subscribe, and play it in HAUNT.
 7. Make the item public once it works.
 
 ## One Workshop item = one playable map
@@ -128,26 +128,48 @@ Rules:
 
 HAUNT checks this layout before mounting the Workshop item. It refuses an item with no pak, more than one pak, a pak missing its matching IoStore files, a `_P` filename, or any other file or folder next to the three.
 
-## Uploading with SteamCMD
+## Uploading to the Workshop
 
-This repository includes [`workshop_item.vdf.example`](workshop_item.vdf.example), a SteamCMD upload template for HAUNT's Workshop App ID. Copy it to `workshop_item.vdf`, then fill in `contentfolder` with the folder containing only your `.pak`, `.utoc`, and `.ucas` files, and `previewfile` with your Workshop preview image. Leave `publishedfileid` as `0` for a new item; Steam assigns an ID that you reuse for later updates.
+Upload with the **HAUNT Workshop Uploader**.
 
-`visibility` controls who can see and download the item:
+> [!IMPORTANT]
+> **HAUNT only lists Workshop items tagged `Map`, and the uploader is the only reliable way we know of to set that tag.**
+> - SteamCMD (`workshop_build_item`) cannot set Workshop tags. A map uploaded with SteamCMD has no `Map` tag, and HAUNT won't offer it.
+> - We are not sure whether an item's author can add the tag any other way, for example from the item's Workshop page. Don't count on it. If your map is already on the Workshop without the tag, upload it again with this tool, entering its Workshop item ID. If that isn't possible, [open an issue](https://github.com/ApostolosGames/HauntWorkshop/issues/new/choose) and we may be able to set the tag for you.
 
-| Value | Visibility | Use it for |
-| --- | --- | --- |
-| `0` | Public | Released maps. Anyone joining a host can download it. |
-| `1` | Friends-only | Testing with Steam friends. |
-| `2` | Private | Your first uploads and solo testing. |
-| `3` | Unlisted | Not listed in the Workshop, but anyone with the link can see it. |
+### Getting the uploader
 
-The template defaults to `2` (private) so your first upload isn't public. Change it to `0` only when the map is ready to release (see [Testing your map](#testing-your-map)).
+Download `WorkshopUploader.zip` from the [Releases page](https://github.com/ApostolosGames/HauntWorkshop/releases) and extract it. Keep `WorkshopUploader.exe` and `steam_api64.dll` in the same folder.
 
-The template sets the `Map` Workshop tag. HAUNT requires it: an item without the `Map` tag won't be offered as a map, so don't remove it. Upload it with:
+- **Requirements:** 64-bit Windows 10 (version 1607 or later) or Windows 11, with Steam running and signed in to an account that owns HAUNT. Nothing else needs installing.
+- **"Windows protected your PC":** the exe isn't code-signed, so Windows SmartScreen may warn the first time you run it. Choose **More info → Run anyway**, or build it yourself (below) if you'd rather not trust a download.
+- **What it does:** the full source is one file, [`Tools/WorkshopUploader/WorkshopUploader.cpp`](Tools/WorkshopUploader/WorkshopUploader.cpp). It talks only to your running Steam client, through Valve's own signed `steam_api64.dll`, and uses the same Workshop API calls as any game's built-in uploader. It reads only the folder and image you choose, writes only its settings file (`%LOCALAPPDATA%\HauntWorkshopUploader\settings.ini`), never asks for your Steam password, and makes no other network connections. It opens a web page only when you click **Open item page**.
+- **Checking the download:** each release lists the SHA-256 hash of `WorkshopUploader.exe`. Compare it with `Get-FileHash WorkshopUploader.exe` in PowerShell.
+- **Building it yourself:** run [`Tools/WorkshopUploader/build.bat`](Tools/WorkshopUploader) with the path to the [Steamworks SDK](https://partner.steamgames.com/downloads/list), on a machine with Visual Studio's C++ tools.
 
-```powershell
-steamcmd +login <SteamUser> +workshop_build_item "C:\Path\To\workshop_item.vdf" +quit
-```
+### Using it
+
+Start Steam, sign in with the account that owns HAUNT, and open `WorkshopUploader.exe`:
+
+| Field | What to enter |
+| --- | --- |
+| Map folder | The folder from the [packaging script](#packaging-your-map) holding only your `.pak`, `.utoc`, and `.ucas`. The uploader checks the layout HAUNT requires and says what is wrong before you upload. |
+| Preview image | A JPG, PNG, or GIF under 1 MB; 16:9 looks best. It is shown next to the field. Required for a new item; on an update, leave it as is or pick a new one. |
+| Title, Description | Shown on the Workshop page. On an update, leaving one empty keeps what is already on Steam. |
+| Visibility | Who can see and download the item (see below). |
+| Change note | Optional. Shown in the item's change history. |
+| Workshop item ID | Leave blank for your first upload. The uploader fills it in once Steam creates the item; keep it to update the same item later, and clear it to publish a different map. |
+
+Press **Upload**. The window shows progress, and **Open item page** appears when it finishes. If it says you need to accept the Workshop legal agreement, do so, or the item stays hidden. The uploader remembers what you entered for next time.
+
+| Visibility | Use it for |
+| --- | --- |
+| Private (only you) | Your first uploads and solo testing. This is the default. |
+| Friends only | Testing with Steam friends. |
+| Unlisted | Not listed in the Workshop, but anyone with the link can see it. |
+| Public | Released maps. Anyone joining a host can download it. |
+
+Keep the item private until the map works (see [Testing your map](#testing-your-map)).
 
 ## Testing your map
 
@@ -170,13 +192,13 @@ Play in Editor (PIE) in your own project, with the [reference templates](#refere
 
 ### 3. Upload privately and test in HAUNT
 
-1. In `workshop_item.vdf`, keep `"visibility"` at `"2"` (private) and upload with SteamCMD as described above. Note the `publishedfileid` that Steam assigns and put it in the VDF so later uploads update the same item.
+1. Upload with the [Workshop uploader](#uploading-to-the-workshop), with **Visibility** set to **Private**. Keep the **Workshop item ID** it fills in, so later uploads update the same item.
 2. Subscribe to the item in the Steam Workshop and let Steam download it.
 3. Start HAUNT, host a lobby, and select the item as the Workshop map.
 4. Confirm the map mounts, loads, and displays all assets, materials, and lighting.
 5. Confirm hunters can leave the container, ghosts spawn in front of it, and no one can fall toward the lobby.
 6. Play through a Haunt phase and use a ghost EMP to check how the map looks with its lights off.
-7. Fix any problems, re-cook, and upload again with the same `publishedfileid`. If Steam doesn't pick up the new version right away, restart Steam or unsubscribe and resubscribe.
+7. Fix any problems, re-cook, and upload again with the same Workshop item ID. If Steam doesn't pick up the new version right away, restart Steam or unsubscribe and resubscribe.
 
 If HAUNT refuses the map, the reason is in `Workshop.log` in `%LOCALAPPDATA%\Ghost\Saved\Logs\`. The previous session's log is kept next to it as `Workshop-backup.log`. Every check HAUNT runs on a Workshop map writes its result there, including the exact file or setting it refused. Include this file when you [report a loading problem](https://github.com/ApostolosGames/HauntWorkshop/issues/new/choose).
 
@@ -186,7 +208,7 @@ To test with other players before release, set `"visibility"` to `"1"` (friends-
 
 ### 4. Publish
 
-When the map works, set `"visibility"` to `"0"` (public) and upload once more with the same `publishedfileid`, or change the visibility on the item's Workshop page.
+When the map works, set **Visibility** to **Public** and upload once more with the same Workshop item ID, or change the visibility on the item's Workshop page.
 
 ## Map positioning and gameplay landmarks
 
@@ -357,7 +379,7 @@ When HAUNT refuses a map, players see a short message on the main menu. The exac
 | `references one of HAUNT's own assets` | Something in the map points at HAUNT's content, often through a stand-in asset at one of HAUNT's paths, or a soft reference. | Remove the reference. Use the Reference Viewer to find which asset holds it. |
 | `has a damaged package header` | The cook is corrupt or wasn't made with UE 5.8. | Cook again with UE 5.8. |
 | `Found N maps inside ...` | The pak contains more than one `.umap` (a second map, sublevels, World Partition cells, or template maps). | Keep a single level with World Partition disabled, remove other maps from the cook list, and repackage. |
-| Your subscribed item doesn't appear as a map in HAUNT | The item is missing the `Map` Workshop tag. | Add `"tags" "Map"` to `workshop_item.vdf` and upload again with the same `publishedfileid`. |
+| Your subscribed item doesn't appear as a map in HAUNT | The item is missing the `Map` Workshop tag, usually because it was uploaded with SteamCMD or another tool that can't set tags. | Upload again with the [Workshop uploader](#uploading-to-the-workshop), entering the item's ID so it updates the same item. |
 | `Could not find a map` | The Asset Registry/map index was stripped, or the map was not cooked. | Use the `[Pak]` settings from [`Templates/Config/DefaultGame.ini`](Templates/Config/DefaultGame.ini), make sure the map is in the cook list, and package with the script. |
 | Map loads without expected assets | A referenced dependency was not included, or it depends on a plugin or custom code HAUNT does not have. | Cook all dependencies with UE 5.8, and use only your own assets and stock engine features. |
 | Map is dark or unlit | HAUNT hides its sky for Workshop maps and adds no lighting; the map has no lights of its own, or static lighting was not built. | Add your own sky/sun and local lights, and build lighting before cooking if you use static/stationary lights. |
@@ -382,4 +404,4 @@ When HAUNT refuses a map, players see a short message on the main menu. The exac
 
 ## License
 
-The guide, the tools, the SteamCMD template, and the reference and configuration templates in this repository are released under the [MIT License](LICENSE). HAUNT itself, its game content, and its trademarks are not covered by this license.
+The guide, the tools (including the Workshop uploader's source), and the reference and configuration templates in this repository are released under the [MIT License](LICENSE). HAUNT itself, its game content, and its trademarks are not covered by this license.
