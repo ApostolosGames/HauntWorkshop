@@ -4,10 +4,9 @@ This repository contains the publishing rules for community maps for **HAUNT**.
 
 ## What you need
 
-- **Unreal Engine 5.8**. Maps must be cooked with the same UE version as HAUNT to load reliably.
+- **Unreal Engine 5.8**. HAUNT is built with **UE 5.8.1**; use 5.8.1 (or a later 5.8 hotfix) to cook your map.
 Do not cook a Workshop map with another Unreal Engine version. A map made with UE 5.7, UE 5.9, or an arbitrary custom engine build might not work.
-- **Your own Unreal project.** A blank UE 5.8 project is the right start. HAUNT uses UE 5.8's default renderer settings, so leave the project's **Rendering** settings as they are; in particular, don't turn on **Substrate** (see [Project setup](#project-setup)). HAUNT does not provide a creator project, plugin pack, or asset kit.
-- **Python 3** on your `PATH`, for the [packaging script](#packaging-your-map).
+- **Your own Unreal project.** A blank UE 5.8 project is the right start. Use UE 5.8's default rendering settings: leave **Project Settings → Rendering** as a new project has it. HAUNT does not provide a creator project, plugin pack, or asset kit.
 
 Your map has to be self-contained. Build the level, its geometry, materials, and **its own lighting** in your project and cook everything it references into your pak. HAUNT supplies the lobby, the hunter container, and the players at runtime. Your map supplies everything else, including its sky and lighting.
 
@@ -17,7 +16,7 @@ Your map has to be self-contained. Build the level, its geometry, materials, and
 2. Import the [reference templates](#reference-templates) and place the container template at its landmark position.
 3. Build your map around world origin `(0, 0, 0)`, leaving room for the hunter container and the ghost spawn area (see [Map positioning and gameplay landmarks](#map-positioning-and-gameplay-landmarks)).
 4. Light the map yourself, including any sky and sun (see [Lighting](#lighting)).
-5. Package the map with [`Tools/PackageWorkshopMap.ps1`](#packaging-your-map). It checks your renderer settings and produces a `.pak` + `.utoc` + `.ucas` set that holds only your map.
+5. [Package the map](#packaging-your-map) as a content-only plugin, giving a `.pak` + `.utoc` + `.ucas` set that holds only your map.
 6. [Test it](#testing-your-map): check it in the editor, [upload it with the Workshop uploader](#uploading-to-the-workshop) as a private item tagged `Map` (HAUNT ignores items without this tag), subscribe, and play it in HAUNT.
 7. Make the item public once it works.
 
@@ -30,11 +29,11 @@ Each Workshop item must contain **exactly one `.umap`**: your playable map, and 
 - Create the level with **File → New Level → Empty Level** (or Basic) and keep **World Partition disabled**. Open World / World Partition maps cook into extra generated level packages.
 - Do not use sublevels, level streaming, or Level Instance actors that point at other `.umap` files. Build everything into the one level.
 - In **Project Settings → Packaging → List of maps to include in a packaged build**, list only your map, and don't cook Starter Content or template maps.
-- Keep the map and everything it made or imported in **one** content-only plugin of your own (see [Keep your content in its own plugin](#keep-your-content-in-its-own-plugin)). Maps under `/Game/` still load for now, but only in a restricted compatibility mode, and that support may be removed in a later update. The [packaging script](#packaging-your-map) only packages maps that live in a plugin. Do not place the map under `/Engine/` or an Engine plugin root.
+- Keep the map and everything it made or imported in **one** content-only plugin of your own (see [Keep your content in its own plugin](#keep-your-content-in-its-own-plugin)). Maps under `/Game/` still load for now, but only in a restricted compatibility mode, and that support may be removed in a later update. Do not place the map under `/Engine/` or an Engine plugin root.
 - Package all assets referenced by the map. Missing meshes, materials, textures, or Blueprint classes will prevent clients from loading it correctly.
 - Use only your own assets and stock UE 5.8 engine features. HAUNT cannot load custom C++ code or code plugins from a Workshop pak, and content from an Engine plugin only works if HAUNT has that plugin enabled too.
 - You do not need a Player Start, GameMode, or GameMode override. HAUNT loads your map into its lobby world as a level instance and places the hunter container, hunters, ghosts, and spectators itself. Your map's World Settings are not used.
-- Do not include the HAUNT executable, base-game paks, or unrelated files. The engine assets your map references (default materials, basic shapes, and so on) are packaged with it, and the packaging script keeps those and drops every other engine file.
+- Do not include the HAUNT executable, base-game paks, or unrelated files.
 - Don't edit stock engine assets (for example `/Engine/BasicShapes` or the default materials) and expect the edit to show up. HAUNT ships its own copies of engine content, and when your pak contains an asset HAUNT already has, HAUNT's copy is the one that loads. To change an engine asset, duplicate it into your own plugin and edit the duplicate.
 
 HAUNT discovers the map from its cooked Asset Registry rather than guessing from a filename. If a pak contains more than one map, HAUNT rejects it instead of choosing one arbitrarily. Before uploading, confirm there is exactly one `.umap` in the pak (see [Check the cooked files](#2-check-the-cooked-files)).
@@ -65,7 +64,7 @@ HAUNT reads the full file list of your `.pak` and `.utoc` before loading anythin
 - Every cooked file must come from your own project folder or the engine's content. Don't add files from outside the project, and don't hand-edit the pak's mount point.
 - No `Binaries` folders, executables, DLLs, or scripts (`.exe`, `.dll`, `.bat`, `.cmd`, `.ps1`, `.vbs`, `.js`, and similar) anywhere in the cook. A content-only plugin with no code module never produces these.
 - Don't localize assets (`L10N` folders or asset localization). Localized asset variants and package redirects aren't supported in Workshop maps.
-- Every plain file in the `.pak` must belong to the map: its `AssetRegistry.bin`, your plugin's own `.uplugin`, and cooked asset and shader files. A standard Unreal package also contains engine and project `.ini` files, every plugin's `.uplugin`, the plugin manifest, the `.uproject`, the global shader cache, and the engine's Slate fonts and internationalization data. That is a whole standalone game, not a map, and HAUNT refuses it. Use the [packaging script](#packaging-your-map), which leaves all of that out.
+- Every plain file in the `.pak` must belong to the map: its `AssetRegistry.bin`, your plugin's own `.uplugin`, and cooked asset and shader files. A standard Unreal package also contains engine and project `.ini` files, every plugin's `.uplugin`, the plugin manifest, the `.uproject`, the global shader cache, and the engine's Slate fonts and internationalization data. That is a whole standalone game, not a map, and HAUNT refuses it. [Package only your plugin](#packaging-your-map), not the whole project.
 
 ## Project setup
 
@@ -74,38 +73,15 @@ HAUNT reads the full file list of your `.pak` and `.utoc` before loading anythin
 - **[`DefaultEngine.ini`](Templates/Config/DefaultEngine.ini)** sets your map as the default map, so the engine's `Entry` map isn't cooked as a second `.umap`. It also lists the shader formats a new UE 5.8 project already cooks: DirectX 12 (SM6) and DirectX 11 (SM5). HAUNT players use either. And it names the surface types HAUNT uses for [footstep sounds](#footstep-sounds-physical-materials). Replace `MyName_MyMap` and `MyMap` with your plugin and map names.
 - **[`DefaultGame.ini`](Templates/Config/DefaultGame.ini)** contains the packaging settings: Pak and IoStore on, no encryption, only your map in the cook list, the Asset Registry kept in the pak's file index, and engine plugin content that maps never use kept out of the cook (the NNE denoiser model alone is about 100 MB). Replace `MyName_MyMap` and `MyMap` with your plugin and map names.
 
-**Renderer settings:** material shaders are compiled with the project's renderer settings, and HAUNT uses UE 5.8's defaults for every one that matters. So keep a new project's **Project Settings → Rendering** as they are. The ones that most often get changed are **Substrate** (keep it off), **GBuffer Format**, **Forward Shading**, **Virtual Texture** support, and **Support Compute Skin Cache** shaders. A map cooked with different settings loads, but its surfaces render as noise. HAUNT refuses such a map when it can tell, which it can for every map packaged with the script.
+**Rendering:** use UE 5.8's default rendering settings. Leave **Project Settings → Rendering** as a new project has it.
 
-Check the renderer settings at any time by running this from your copy of this repository:
-
-```powershell
-python Tools\haunt_renderer_settings.py check "C:\Path\To\MyMapProject.uproject" --engine "C:\Program Files\Epic Games\UE_5.8"
-```
-
-It lists every setting that differs from HAUNT's. The packaging script runs the same check and won't package until it passes.
-
-**Don't enable or disable engine plugins** away from their defaults unless your map needs them. A content-only project whose plugin list differs from the engine's defaults makes Unreal's standard packaging insist on building a C++ game executable. The packaging script never builds code, so this only matters if you package another way.
+**Don't enable or disable engine plugins** away from their defaults unless your map needs them. A content-only project whose plugin list differs from the engine's defaults makes Unreal's standard packaging insist on building a C++ game executable.
 
 ## Packaging your map
 
-Package with [`Tools/PackageWorkshopMap.ps1`](Tools/PackageWorkshopMap.ps1), run from your copy of this repository. Save everything in the editor first; the editor may stay open. The script turns on Unreal's Python Editor Script Plugin for its own run, so there is nothing else to install.
+Package your map's **content-only plugin**, not the whole project. A packaged project is a complete standalone game (engine and project `.ini` files, every plugin's `.uplugin`, the `.uproject`, fonts, and more), and HAUNT refuses it.
 
-```powershell
-powershell -ExecutionPolicy Bypass -File Tools\PackageWorkshopMap.ps1 `
-    -Project "C:\Path\To\MyMapProject.uproject" `
-    -Plugin MyName_MyMap `
-    -Map /MyName_MyMap/Maps/MyMap `
-    -EngineDir "C:\Program Files\Epic Games\UE_5.8"
-```
-
-The script:
-
-1. Checks your renderer settings against [`Templates/haunt_renderer_settings.json`](Templates/haunt_renderer_settings.json) and records them in your plugin's `.uplugin` as `HauntRendererSettings`. HAUNT compares them with its own when it loads the map and refuses a mismatch instead of rendering noise.
-2. Cooks the project with Unreal's own BuildCookRun, without building any code. Editor-only AI tool plugins (`AllToolsets`, `ModelContextProtocol`) are disabled for the cook, because their errors fail it; pass `-DisablePlugins` to change the list.
-3. Rebuilds the pak and IoStore container with only your map, the assets it references (its own and the engine's), its `AssetRegistry.bin`, your `.uplugin`, and your shader library.
-4. Writes `<Plugin>.pak`, `.utoc`, and `.ucas` to `Workshop\Upload` in your project (or `-OutputDir`), and checks them the way HAUNT will: one `.umap`, nothing under `/Game/`, an Asset Registry, and shaders for SM5 and SM6. It stops with an error if any check fails.
-
-Upload that folder as it is. Run the script again for every update; don't edit the files by hand.
+The result must be one `.pak` with its matching `.utoc` and `.ucas`, holding your map, the assets it uses, its `AssetRegistry.bin`, your plugin's `.uplugin`, and its shader library, with shaders for both DirectX 11 (SM5) and DirectX 12 (SM6). The settings in [`Templates/Config/`](Templates/Config/) cover the cook. Put the three files in a folder of their own for upload (see [Upload folder layout](#upload-folder-layout)), and package again for every update; don't edit the files by hand.
 
 ## Upload folder layout
 
@@ -153,7 +129,7 @@ Start Steam, sign in with the account that owns HAUNT, and open `WorkshopUploade
 
 | Field | What to enter |
 | --- | --- |
-| Map folder | The folder from the [packaging script](#packaging-your-map) holding only your `.pak`, `.utoc`, and `.ucas`. The uploader checks the layout HAUNT requires and says what is wrong before you upload. |
+| Map folder | The folder holding only your [packaged](#packaging-your-map) `.pak`, `.utoc`, and `.ucas`. The uploader checks the layout HAUNT requires and says what is wrong before you upload. |
 | Preview image | A JPG, PNG, or GIF under 1 MB; 16:9 looks best. It is shown next to the field. Required for a new item; on an update, leave it as is or pick a new one. |
 | Title, Description | Shown on the Workshop page. On an update, leaving one empty keeps what is already on Steam. |
 | Visibility | Who can see and download the item (see below). |
@@ -188,7 +164,7 @@ Play in Editor (PIE) in your own project, with the [reference templates](#refere
 ### 2. Check the cooked files
 
 - The upload folder contains only the `.pak`, `.utoc`, and `.ucas` files, all with the same filename stem.
-- The packaging script finished without errors. It already checks the contents. To look yourself, list them with `UnrealPak.exe "C:\Path\To\MyWorkshopMap.pak" -List` (UnrealPak is in `Engine\Binaries\Win64\`). The pak should hold only `AssetRegistry.bin`, your `.uplugin`, and `ShaderTypeInfo` files. List the `.utoc` the same way to see the packages: exactly one `.umap`, your plugin's assets, and the engine assets your map uses.
+- List the pak's contents with `UnrealPak.exe "C:\Path\To\MyWorkshopMap.pak" -List` (UnrealPak is in `Engine\Binaries\Win64\`). The pak should hold only `AssetRegistry.bin`, your `.uplugin`, and `ShaderTypeInfo` files. List the `.utoc` the same way to see the packages: exactly one `.umap`, your plugin's assets, and the engine assets your map uses.
 
 ### 3. Upload privately and test in HAUNT
 
@@ -204,7 +180,7 @@ If HAUNT refuses the map, the reason is in `Workshop.log` in `%LOCALAPPDATA%\Gho
 
 If HAUNT closes while your map is loading, the next launch tells you so on the main menu, and HAUNT won't load that build of the map again. Uploading a new build lifts the block. HAUNT keeps the list of blocked builds in `%LOCALAPPDATA%\Ghost\Saved\WorkshopMaps\CrashedMaps.json`. To retry the same build, delete that file.
 
-To test with other players before release, set `"visibility"` to `"1"` (friends-only). Your Steam friends can then download the item when they join your lobby. Clients automatically download the host-selected Workshop map and must finish downloading and loading it before they count as ready to start the match. A player whose game can't load the map leaves the lobby and is told why on the main menu, and the map shows as failed for that player on the lobby's map screen. If the host's own game can't load it, the match is cancelled for everyone. Test with at least one other player before you publish.
+To test with other players before release, set **Visibility** to **Friends only**. Your Steam friends can then download the item when they join your lobby. Clients automatically download the host-selected Workshop map and must finish downloading and loading it before they count as ready to start the match. A player whose game can't load the map leaves the lobby and is told why on the main menu, and the map shows as failed for that player on the lobby's map screen. If the host's own game can't load it, the match is cancelled for everyone. Test with at least one other player before you publish.
 
 ### 4. Publish
 
@@ -380,14 +356,12 @@ When HAUNT refuses a map, players see a short message on the main menu. The exac
 | `has a damaged package header` | The cook is corrupt or wasn't made with UE 5.8. | Cook again with UE 5.8. |
 | `Found N maps inside ...` | The pak contains more than one `.umap` (a second map, sublevels, World Partition cells, or template maps). | Keep a single level with World Partition disabled, remove other maps from the cook list, and repackage. |
 | Your subscribed item doesn't appear as a map in HAUNT | The item is missing the `Map` Workshop tag, usually because it was uploaded with SteamCMD or another tool that can't set tags. | Upload again with the [Workshop uploader](#uploading-to-the-workshop), entering the item's ID so it updates the same item. |
-| `Could not find a map` | The Asset Registry/map index was stripped, or the map was not cooked. | Use the `[Pak]` settings from [`Templates/Config/DefaultGame.ini`](Templates/Config/DefaultGame.ini), make sure the map is in the cook list, and package with the script. |
+| `Could not find a map` | The Asset Registry/map index was stripped, or the map was not cooked. | Use the `[Pak]` settings from [`Templates/Config/DefaultGame.ini`](Templates/Config/DefaultGame.ini), make sure the map is in the cook list, and package again. |
 | Map loads without expected assets | A referenced dependency was not included, or it depends on a plugin or custom code HAUNT does not have. | Cook all dependencies with UE 5.8, and use only your own assets and stock engine features. |
 | Map is dark or unlit | HAUNT hides its sky for Workshop maps and adds no lighting; the map has no lights of its own, or static lighting was not built. | Add your own sky/sun and local lights, and build lighting before cooking if you use static/stationary lights. |
-| Materials render as the engine's default gray checkerboard | The pak's shader library could not be found. | Package with the packaging script, which keeps `AssetRegistry.bin` and the shader library in the pak. |
-| Materials render as noise or garbage | The map was cooked with renderer settings that differ from HAUNT's (Substrate on, for example), and was packaged without the script, so HAUNT couldn't check them. | Put the project's Rendering settings back to their defaults (run the check command in [Project setup](#project-setup)), and package with the script. |
-| `which is not part of a map` or `looks like a complete game package` | The pak is a standard Unreal package: a whole standalone game with engine `.ini` files, plugin descriptors, and other game files. | Package with the [packaging script](#packaging-your-map), which keeps only the map. |
-| `contains the plugin descriptor '<name>.uplugin'` | The pak has a plugin descriptor other than your map plugin's. | Package with the packaging script. |
-| `cooked with renderer settings that differ from HAUNT's` | Your project changed a renderer setting from UE 5.8's default (Substrate, for example). The log names each setting. | Set those back to their defaults in **Project Settings → Rendering**, restart the editor, and package again. |
+| Materials render as the engine's default gray checkerboard | The pak's shader library could not be found. | Keep **Share Material Shader Code** on (as in [`DefaultGame.ini`](Templates/Config/DefaultGame.ini)) so the shader library is cooked, and make sure it and `AssetRegistry.bin` are in the pak. |
+| `which is not part of a map` or `looks like a complete game package` | The pak is a standard Unreal package: a whole standalone game with engine `.ini` files, plugin descriptors, and other game files. | [Package only your map's plugin](#packaging-your-map), not the whole project. |
+| `contains the plugin descriptor '<name>.uplugin'` | The pak has a plugin descriptor other than your map plugin's. | [Package only your map's plugin](#packaging-your-map). |
 | `no shaders for this graphics mode` | The map was cooked for only one of DirectX 11 (SM5) and DirectX 12 (SM6). A new UE 5.8 project cooks both, so the project's targeted shader formats were changed. | Restore them with the `WindowsTargetSettings` section from [`Templates/Config/DefaultEngine.ini`](Templates/Config/DefaultEngine.ini), and package again. |
 | The main menu says the game closed while loading the map | HAUNT crashed while your map was loading. That build is now blocked on that PC. | Check `Workshop.log` and test your map's Blueprints. Uploading a new build lifts the block. |
 | Hunters are stuck or pushed out of the container | Map geometry overlaps the container at `(0, 0, 205)` or blocks its door. | Clear the container footprint and the space on its negative X side. |

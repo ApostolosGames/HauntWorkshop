@@ -63,4 +63,4 @@ body:
         - label: The upload folder contains only one `.pak` with matching `.utoc` and `.ucas` files.
           required: true
         - label: The pak contains exactly one `.umap`.
-        - label: I packaged the map with `Tools/PackageWorkshopMap.ps1`, and it finished without errors.
+        - label: I packaged only the map's content-only plugin, not the whole project.
